@@ -1,0 +1,96 @@
+﻿@using AutoMapper;
+@using TradingLicense.Infrastructure;
+@using TradingLicense.Web.Classes;
+@model TradingLicense.Model.PageRoleAccessModel
+@{
+    ViewBag.Title = "ManageAccessPage";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@{
+    List<TradingLicense.Model.RoleTemplateModel> roleTemplateList = new List<TradingLicense.Model.RoleTemplateModel>();
+    using (var ctx = new TradingLicense.Data.LicenseApplicationContext())
+    {
+        var roleTemplate = ctx.RoleTemplates.ToList();
+        roleTemplateList = Mapper.Map<List<TradingLicense.Model.RoleTemplateModel>>(roleTemplate);
+    }
+}
+<div id="divMessage"></div>
+<div class="card">
+    <div class="header">
+        <h4 id="headerTitle">Kemaskini Had Capaian Pengguna</h4>
+    </div>
+    <div class="">
+        @using (Html.BeginForm(null, null, FormMethod.Post, new { name = "frmAccessPage", id = "frmAccessPage" }))
+        {
+            @Html.AntiForgeryToken()
+            @Html.HiddenFor(m => m.PageID)
+            @Html.HiddenFor(m => m.PageDesc)
+            <div class="grid">
+                <table cellspacing="0" class="table table-striped dataTable no-footer" id="tblAccessPage">
+                    <thead>
+                        <tr>
+                            <th colspan="2">
+                                Mukasurat: @Model.PageDesc
+                            </th>
+                        </tr>
+                        <tr role="row">
+                            <th>Peranan Pengguna</th>
+                            <th>Tahap Capaian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.RoleAccess.Count; i++)
+                        {
+                            var pageAccess = Model.RoleAccess[i];
+                            var id = pageAccess.RoleTemplateID;
+                            <tr role="row">
+                                <td>
+                                    @pageAccess.RoleTemplateDesc
+                                    @Html.HiddenFor(m => m.RoleAccess[i].AccessPageID)
+                                    @Html.HiddenFor(m => m.RoleAccess[i].RoleTemplateID)
+                                    @Html.HiddenFor(m => m.RoleAccess[i].RoleTemplateDesc)
+                                    @Html.HiddenFor(m => m.RoleAccess[i].PageDesc)
+                                    @Html.HiddenFor(m => m.RoleAccess[i].ScreenId)
+                                </td>
+                                <td>
+                                    @if (TradingLicenseCommon.HasAccess(SystemEnum.Page.AccessPages, SystemEnum.PageRight.CrudLevel2))
+                                    {
+                                        @Html.DropDownListFor(m => m.RoleAccess[i].CrudLevel, new SelectList(TradingLicenseCommon.GetCRUDLevelList(), "Value", "Key", pageAccess.CrudLevel), "-- Select Access Level --", new { @class = "form-control" })
+                                        @Html.ValidationMessageFor(m => m.RoleAccess[i].CrudLevel)
+                                    }
+                                    else
+                                    {
+                                        @TradingLicenseCommon.GetCRUDLevelDesc(pageAccess.CrudLevel)
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="form-group">
+                        @if (TradingLicenseCommon.HasAccess(SystemEnum.Page.AccessPages, SystemEnum.PageRight.CrudLevel2))
+                        {
+                            <input type="submit" class="btn btn-primary" value="Simpan" />
+                        }
+                        <input type="button" class="btn btn-default" value="Batal" onclick="back()" />
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+@section scripts{
+    <script>
+        var actionError = '@(TempData["ErrorMessage"])';
+        if (actionError != null && actionError != "") {
+            errorMessage(actionError);
+        }
+        function back() {
+            var link = '@Url.Action("AccessPage", "Master")';
+            window.location.href = link;
+        }
+    </script>
+}

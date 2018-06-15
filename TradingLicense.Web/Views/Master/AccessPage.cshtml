@@ -1,0 +1,169 @@
+﻿@using TradingLicense.Infrastructure;
+@using TradingLicense.Web.Classes;
+@{
+    ViewBag.Title = "AccessPage";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@{
+    List<SelectListItem> listItems = new List<SelectListItem>();
+    foreach (var page in TradingLicenseCommon.GetPages())
+    {
+        listItems.Add(new SelectListItem()
+        {
+            Text = page.Key,
+            Value = page.Value.ToString()
+        });
+    }
+}
+<div id="divMessage"></div>
+<div class="card">
+    <div class="header">
+        <h4>Had Capaian Pengguna</h4>
+    </div>
+    <div class="filter-block">
+        <div class="row small-gutter">
+            <form>
+                <div class="col-xs-4">
+                    @Html.DropDownList("cmbPages", listItems, "-- Select Page --", new { @class = "form-control", @onchange = "bindTable()" })
+                </div>
+                <div class="col-xs-8">
+                    @if (TradingLicenseCommon.HasAccess(SystemEnum.Page.AccessPages, SystemEnum.PageRight.CrudLevel3))
+                    {
+                        <a id="lnkEditButton" href="#" title="Kemaskini" onclick="return manageAccessPage();"><img src="@Url.Content("~/images/edit.png")" alt="Access Page"></a>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="grid" id="divtblAccessPage">
+        <table cellspacing="0" class="table table-striped" id="tblAccessPage"></table>
+    </div>
+</div>
+@section scripts{
+    <script type="text/javascript">
+
+        $(function () {
+            $('.form-control').keypress(function (e) {
+                if (e.which == 13) {
+                    bindTable();
+                    return false;
+                }
+            });
+            var success = '@(TempData["SuccessMessage"])';
+            if (success != null && success != "") {
+                successMessage(success);
+            }
+            var bindOnLoad = '@(TempData["BindAccess"])';
+            if (bindOnLoad != null && bindOnLoad != "") {
+                $('#cmbPages').val(bindOnLoad);
+            } else {
+                $('#cmbPages').val(1);
+            }
+            bindTable();
+            manageEditButtonVisibility();
+        });
+
+        function manageAccessPage() {
+            var id = $('#cmbPages').val();
+            if (id) {
+                var link = '@Url.Action("ManageAccessPage", "Master")?Id=' + $('#cmbPages').val();
+                window.location.href = link;
+            }
+            return false;
+        }
+
+        function manageEditButtonVisibility() {
+            var id = $('#cmbPages').val();
+            if (id && $('#lnkEditButton')) {
+                $('#lnkEditButton').show();
+            } else {
+                $('#lnkEditButton').hide();
+            }
+        }
+
+        function bindTable() {
+            var id = $('#cmbPages').val();
+            manageEditButtonVisibility();
+
+            if ($.fn.DataTable.isDataTable("#tblAccessPage")) {
+                $('#tblAccessPage').dataTable().fnDestroy();
+                $('#divtblAccessPage').html('<table class="table table-striped" width="100%"  id="tblAccessPage"></table>');
+            }
+            if (!id) {
+                return;
+            }
+            table = $("#tblAccessPage").dataTable({
+                "autoWidth": false,
+                "searching": false,
+                "paging": true,
+                "sorting": false,
+                "sPaginationType": "full_numbers",
+                "language": {
+                    "lengthMenu": "Page Size : _MENU_ ",
+                    "info": "Records _START_ to _END_ of (_TOTAL_)",
+                    "emptyTable": "No Record(s) Found"
+                },
+                "processing": true,
+                "serverSide": true,
+                "pageLength": 10,
+                "ajax": {
+                    url: '@Url.Action("AccessPage", "Master")',
+                    type: "POST",
+                    data: bindSearch()
+                },
+                "columns": [
+                    { "title": "Peranan Pengguna", "data": "RoleTemplateDesc", "orderable": false },
+                    {
+                        "title": "Tahap Capaian",
+                        "data": "CrudLevel",
+                        "orderable": false,
+                        "render": function (data, type, row) {
+                            if (data==0) {
+                                return '<label class="label label-danger">Tiada Akses</label>';
+                            }
+                            if (data==1) {
+                                return '<label class="label label-success">Baca Sahaja</label>';
+                            }
+                            if (data == 2) {
+                                return '<label class="label label-success">Baca & Cipta</label>';
+                            }
+                            if (data == 3) {
+                                return '<label class="label label-success">Baca, Cipta & Ubah</label>';
+                            }
+                            if (data == 4) {
+                                return '<label class="label label-success">Baca, Cipta, Ubah & Padam</label>';
+                            }
+                        },
+                    }
+
+                ],
+                "drawCallback": function (settings) {
+                    //hide paging and info when empty datattable
+                    var api = this.api();
+                    if (api.rows({ page: 'current' }).data().length <= 10) {
+                        $('#tblAccessPage_info').hide();
+                        $('#tblAccessPage_paginate').hide();
+                        $('#tblAccessPage_length').hide();
+                    }
+                    else {
+                        $('#tblAccessPage_info').show();
+                        $('#tblAccessPage_paginate').show();
+                        $('#tblAccessPage_length').show();
+                    }
+                    bindSortingArrow();
+                }
+            });
+        }
+
+        function clearControls() {
+            $("#cmbPages").val('');
+            bindTable();
+        }
+
+        function bindSearch() {
+            var param = {};
+            param["PageID"] = $('#cmbPages').val();
+            return param;
+        }
+    </script>
+}
